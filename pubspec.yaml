@@ -30,17 +30,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
   # 画像選択 / カメラ撮影
-  image_picker: ^1.1.2
+  image_picker: ^1.2.2
   # 端末内で動作するOCR（PaddleOCR/OpenAIの代替として無料・APIキー不要）
   google_mlkit_text_recognition: ^0.13.0
   # LibreTranslate等の翻訳API呼び出し用
   http: ^1.2.2
+  photo_manager: ^3.6.4
 
 dev_dependencies:
   flutter_test:

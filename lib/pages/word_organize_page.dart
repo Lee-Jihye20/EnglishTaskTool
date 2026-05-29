@@ -6,7 +6,7 @@ import '../services/translation_service.dart';
 import '../widgets/app_header.dart';
 import 'word_list_page.dart';
 
-/// 単語整理ページ。
+/// 単語整理ページの本文。
 /// 1. 英文入力ボックス（値の受け渡し元）
 /// 2. 英文出力ボックス（disabled・翻訳結果などの出力先）
 /// 3. 完全翻訳ボタン（入力全文を翻訳して出力ボックスへ）
@@ -97,77 +97,67 @@ class _WordOrganizePageState extends State<WordOrganizePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: const AppHeader(current: AppPage.wordOrganize),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. 英文入力ボックス
-              _BoxLabel(
-                label: '英文入力ボックス',
-                onCopy: _copyInput,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _input,
-                minLines: 5,
-                maxLines: null,
-                keyboardType: TextInputType.multiline,
-                decoration: const InputDecoration(
-                  hintText: 'ここに英文を貼り付け・入力してください。',
-                ),
-              ),
-              const SizedBox(height: 20),
-              // 3 & 4. 機能ボタン
-              ElevatedButton.icon(
-                onPressed: _translating ? null : _translateAll,
-                icon: _translating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.surface,
-                        ),
-                      )
-                    : const Icon(Icons.translate),
-                label: const Text('完全翻訳'),
-              ),
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: _openWordList,
-                icon: const Icon(Icons.sort_by_alpha),
-                label: const Text('単語整理'),
-              ),
-              const SizedBox(height: 24),
-              // 2. 英文出力ボックス（disabled）
-              _BoxLabel(
-                label: '英文出力ボックス',
-                onCopy: _copyOutput,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _output,
-                // 自分で入力できないようにする。
-                enabled: false,
-                readOnly: true,
-                minLines: 5,
-                maxLines: null,
-                style: const TextStyle(color: AppTheme.ink),
-                decoration: const InputDecoration(
-                  filled: true,
-                  fillColor: AppTheme.disabledFill,
-                  hintText: '翻訳などの結果がここに表示されます。',
-                ),
-              ),
-            ],
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _BoxLabel(
+            label: '英文入力ボックス',
+            onCopy: _copyInput,
           ),
-        ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _input,
+            minLines: 5,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            decoration: const InputDecoration(
+              hintText: 'ここに英文を貼り付け・入力してください。',
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _translating ? null : _translateAll,
+            icon: _translating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.surface,
+                    ),
+                  )
+                : const Icon(Icons.translate),
+            label: const Text('完全翻訳'),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _openWordList,
+            icon: const Icon(Icons.sort_by_alpha),
+            label: const Text('単語整理'),
+          ),
+          const SizedBox(height: 24),
+          _BoxLabel(
+            label: '英文出力ボックス',
+            onCopy: _copyOutput,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _output,
+            enabled: false,
+            readOnly: true,
+            minLines: 5,
+            maxLines: null,
+            style: const TextStyle(color: AppTheme.ink),
+            decoration: const InputDecoration(
+              filled: true,
+              fillColor: AppTheme.disabledFill,
+              hintText: '翻訳などの結果がここに表示されます。',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -191,11 +181,10 @@ class _BoxLabel extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        TextButton.icon(
+        AppIconTextButton(
           onPressed: onCopy,
-          icon: const Icon(Icons.copy, size: 18),
-          label: const Text('コピー'),
-          style: TextButton.styleFrom(foregroundColor: AppTheme.ink),
+          icon: Icons.copy,
+          label: 'コピー',
         ),
       ],
     );

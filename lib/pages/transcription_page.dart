@@ -7,8 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../services/ocr_service.dart';
 import '../widgets/app_header.dart';
+import 'photo_picker_page.dart';
 
-/// 文字起こしページ。
+/// 文字起こし（画像から英文読み取り）ページの本文。
 /// "画像選択" / "写真を撮影" ボタンから画像を取得し、OCRで文字を抽出して
 /// テキストボックスに表示する。コピーボタンも配置する。
 class TranscriptionPage extends StatefulWidget {
@@ -34,33 +35,54 @@ class _TranscriptionPageState extends State<TranscriptionPage> {
   }
 
   Future<void> _pick(ImageSource source) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        imageQuality: 95,
-      );
-      if (picked == null) return;
-
-      setState(() {
-        _image = File(picked.path);
-        _processing = true;
-        _textController.clear();
-      });
-
-      final text = await _ocr.recognizeFromPath(picked.path);
-      if (!mounted) return;
-      setState(() {
-        _textController.text = text;
-        _processing = false;
-      });
-
-      if (text.trim().isEmpty) {
-        _showSnack('文字を検出できませんでした。別の画像をお試しください。');
-      }
+      final File? imageFile = switch (source) {
+        ImageSource.gallery => await Navigator.of(context).push<File>(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) => const PhotoPickerPage(),
+            ),
+          ),
+        ImageSource.camera => await _pickFromCamera(),
+      };
+      if (imageFile == null) return;
+      await _processImage(imageFile);
     } catch (e) {
       if (!mounted) return;
       setState(() => _processing = false);
       _showSnack('画像の処理に失敗しました: $e');
+    }
+  }
+
+  Future<File?> _pickFromCamera() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 95,
+    );
+    if (picked == null) return null;
+    return File(picked.path);
+  }
+
+  Future<void> _processImage(File imageFile) async {
+    setState(() {
+      _image = imageFile;
+      _processing = true;
+      _textController.clear();
+    });
+
+    final text = await _ocr.recognizeFromPath(imageFile.path);
+    if (!mounted) return;
+    setState(() {
+      _textController.text = text;
+      _processing = false;
+    });
+
+    if (text.trim().isEmpty) {
+      _showSnack('文字を検出できませんでした。別の画像をお試しください。');
     }
   }
 
@@ -82,44 +104,37 @@ class _TranscriptionPageState extends State<TranscriptionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: const AppHeader(current: AppPage.transcription),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _SectionTitle(
-                title: '画像から文字起こし',
-                subtitle: '画像を選ぶか写真を撮ると、英文を自動で読み取ります。',
-              ),
-              const SizedBox(height: 20),
-              // 画面中央のColumn：画像選択 / 写真を撮影
-              ElevatedButton.icon(
-                onPressed: _processing ? null : () => _pick(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library_outlined),
-                label: const Text('画像選択'),
-              ),
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: _processing ? null : () => _pick(ImageSource.camera),
-                icon: const Icon(Icons.photo_camera_outlined),
-                label: const Text('写真を撮影'),
-              ),
-              const SizedBox(height: 24),
-              if (_image != null) _ImagePreview(image: _image!),
-              if (_image != null) const SizedBox(height: 20),
-              _ResultBox(
-                controller: _textController,
-                processing: _processing,
-                onCopy: _copy,
-              ),
-            ],
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SectionTitle(
+            title: '画像から文字起こし',
+            subtitle: '画像を選ぶか写真を撮ると、英文を自動で読み取ります。',
           ),
-        ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _processing ? null : () => _pick(ImageSource.gallery),
+            icon: const Icon(Icons.photo_library_outlined),
+            label: const Text('画像選択'),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _processing ? null : () => _pick(ImageSource.camera),
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: const Text('写真を撮影'),
+          ),
+          const SizedBox(height: 24),
+          if (_image != null) _ImagePreview(image: _image!),
+          if (_image != null) const SizedBox(height: 20),
+          _ResultBox(
+            controller: _textController,
+            processing: _processing,
+            onCopy: _copy,
+          ),
+        ],
       ),
     );
   }
@@ -180,11 +195,10 @@ class _ResultBox extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else
-              TextButton.icon(
+              AppIconTextButton(
                 onPressed: onCopy,
-                icon: const Icon(Icons.copy, size: 18),
-                label: const Text('コピー'),
-                style: TextButton.styleFrom(foregroundColor: AppTheme.ink),
+                icon: Icons.copy,
+                label: 'コピー',
               ),
           ],
         ),

@@ -1,64 +1,150 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../pages/transcription_page.dart';
-import '../pages/word_organize_page.dart';
 
-/// TOPページ以外で表示する共通ヘッダー。
-/// "文字起こしページ" と "単語整理ページ" へのリダイレクトボタンを配置する。
-/// 画面占有率は最大10%に収める。
+/// ヘッダーを持つページの種別。
+enum AppPage {
+  transcription,
+  wordOrganize;
+
+  int get tabIndex => switch (this) {
+        AppPage.transcription => 0,
+        AppPage.wordOrganize => 1,
+      };
+
+  String get sectionLabel => switch (this) {
+        AppPage.transcription => '文字起こし',
+        AppPage.wordOrganize => '単語整理',
+      };
+}
+
+/// 現在のセクションを「攻略APP | 〇〇」で示すヘッダー。
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
-  /// 現在表示しているページの種別。自分自身への遷移ボタンは無効化する。
   final AppPage current;
 
   const AppHeader({super.key, required this.current});
 
+  static const double _headerHeight = 56;
+
   @override
   Size get preferredSize => const Size.fromHeight(_headerHeight);
 
-  // ヘッダーの基準高さ。build側で画面の10%を上限にクランプする。
-  static const double _headerHeight = 64;
-
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    // 画面占有率を10%までに制限する（上端のセーフエリアは別途確保）。
-    final maxBody = media.size.height * 0.10;
-    final bodyHeight =
-        _headerHeight.clamp(0.0, maxBody == 0 ? _headerHeight : maxBody);
-
     return Material(
       color: AppTheme.surface,
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: bodyHeight,
+          height: _headerHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          alignment: Alignment.centerLeft,
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppTheme.line)),
+          ),
+          child: _Breadcrumb(current: current),
+        ),
+      ),
+    );
+  }
+}
+
+class _Breadcrumb extends StatelessWidget {
+  final AppPage current;
+
+  const _Breadcrumb({required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBreadcrumbText(segments: ['攻略APP', current.sectionLabel]);
+  }
+}
+
+/// 「攻略APP | 〇〇 | …」形式のパンくず表示。
+class AppBreadcrumbText extends StatelessWidget {
+  final List<String> segments;
+
+  const AppBreadcrumbText({super.key, required this.segments});
+
+  @override
+  Widget build(BuildContext context) {
+    if (segments.isEmpty) return const SizedBox.shrink();
+
+    final children = <Widget>[];
+    for (var i = 0; i < segments.length; i++) {
+      if (i > 0) {
+        children.add(const _Separator());
+      }
+      final isLast = i == segments.length - 1;
+      children.add(
+        Text(
+          segments[i],
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: isLast ? FontWeight.w800 : FontWeight.w600,
+            color: isLast ? AppTheme.ink : AppTheme.inkSoft,
+          ),
+        ),
+      );
+    }
+
+    return Row(children: children);
+  }
+}
+
+class _Separator extends StatelessWidget {
+  const _Separator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      child: Text(
+        '|',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: AppTheme.line,
+        ),
+      ),
+    );
+  }
+}
+
+/// サブ画面用のパンくず付き AppBar。
+class AppBreadcrumbBar extends StatelessWidget implements PreferredSizeWidget {
+  final List<String> segments;
+
+  const AppBreadcrumbBar({super.key, required this.segments});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(AppHeader._headerHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: AppHeader._headerHeight,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: AppTheme.line),
-            ),
+            border: Border(bottom: BorderSide(color: AppTheme.line)),
           ),
           child: Row(
             children: [
-              // ロゴ兼TOPへ戻るボタン
-              _BrandButton(
-                onTap: () => Navigator.of(context)
-                    .popUntil((route) => route.isFirst),
+              SizedBox(
+                width: AppTheme.minTouchTarget,
+                height: AppTheme.minTouchTarget,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back),
+                  color: AppTheme.ink,
+                ),
               ),
-              const Spacer(),
-              _HeaderTab(
-                label: '文字起こし',
-                icon: Icons.document_scanner_outlined,
-                selected: current == AppPage.transcription,
-                onTap: () => _go(context, AppPage.transcription),
-              ),
-              const SizedBox(width: 6),
-              _HeaderTab(
-                label: '単語整理',
-                icon: Icons.sort_by_alpha,
-                selected: current == AppPage.wordOrganize,
-                onTap: () => _go(context, AppPage.wordOrganize),
+              Expanded(
+                child: AppBreadcrumbText(segments: segments),
               ),
             ],
           ),
@@ -66,101 +152,28 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
   }
-
-  void _go(BuildContext context, AppPage target) {
-    if (target == current) return;
-    final Widget page = switch (target) {
-      AppPage.transcription => const TranscriptionPage(),
-      AppPage.wordOrganize => const WordOrganizePage(),
-    };
-    // ヘッダー間の移動は置き換え遷移にしてスタックを浅く保つ。
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => page),
-    );
-  }
 }
 
-/// ヘッダーを持つページの種別。
-enum AppPage { transcription, wordOrganize }
-
-class _BrandButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _BrandButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          children: [
-            Icon(Icons.home_outlined, size: 20, color: AppTheme.ink),
-            SizedBox(width: 6),
-            Text(
-              '攻略APP',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.ink,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderTab extends StatelessWidget {
-  final String label;
+/// コピーなど小さめの操作ボタン用（最小 44×44）。
+class AppIconTextButton extends StatelessWidget {
+  final VoidCallback? onPressed;
   final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+  final String label;
 
-  const _HeaderTab({
-    required this.label,
+  const AppIconTextButton({
+    super.key,
+    required this.onPressed,
     required this.icon,
-    required this.selected,
-    required this.onTap,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.ink : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppTheme.ink : AppTheme.line,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? AppTheme.surface : AppTheme.ink,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppTheme.surface : AppTheme.ink,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: AppTheme.minTouchTextButton,
     );
   }
 }

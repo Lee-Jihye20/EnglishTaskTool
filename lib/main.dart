@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme/app_theme.dart';
-import 'pages/top_page.dart';
+import 'widgets/app_shell.dart';
 
 void main() {
   runApp(const EngTaskApp());
@@ -16,7 +16,7 @@ class EngTaskApp extends StatelessWidget {
       title: '英文課題攻略APP',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const TopPage(),
+      home: const AppShell(),
     );
   }
 }

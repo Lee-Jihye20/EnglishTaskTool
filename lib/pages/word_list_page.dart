@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../services/translation_service.dart';
+import '../widgets/app_header.dart';
+import '../widgets/dismiss_keyboard.dart';
 
 /// 単語の並べ替え基準。
 enum SortMode { defaultOrder, alphabetical, frequency }
@@ -134,22 +136,10 @@ class _WordListPageState extends State<WordListPage> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.ink,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        shape: const Border(bottom: BorderSide(color: AppTheme.line)),
-        title: Text(
-          '単語整理（${_allWords.length}語）',
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppTheme.ink,
-          ),
-        ),
+      appBar: AppBreadcrumbBar(
+        segments: ['攻略APP', '単語整理', '単語一覧（${_allWords.length}語）'],
       ),
-      body: SafeArea(
-        top: false,
+      body: DismissKeyboard(
         child: Column(
           children: [
             _Controls(
@@ -168,6 +158,8 @@ class _WordListPageState extends State<WordListPage> {
                       ),
                     )
                   : ListView.separated(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       itemCount: words.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -249,17 +241,17 @@ class _Controls extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               // 昇順 / 降順 トグル
-              InkWell(
+              _MinTouchInkWell(
                 onTap: onToggleOrder,
-                borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     border: Border.all(color: AppTheme.ink),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         ascending ? Icons.arrow_upward : Icons.arrow_downward,
@@ -300,14 +292,14 @@ class _SortChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return _MinTouchInkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? AppTheme.ink : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: selected ? AppTheme.ink : AppTheme.line,
           ),
@@ -319,6 +311,36 @@ class _SortChip extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: selected ? AppTheme.surface : AppTheme.ink,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MinTouchInkWell extends StatelessWidget {
+  final VoidCallback onTap;
+  final Widget child;
+  final BorderRadius? borderRadius;
+
+  const _MinTouchInkWell({
+    required this.onTap,
+    required this.child,
+    this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius ?? BorderRadius.circular(10),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: AppTheme.minTouchTarget,
+            minHeight: AppTheme.minTouchTarget,
+          ),
+          child: Center(child: child),
         ),
       ),
     );
@@ -340,6 +362,7 @@ class _WordTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
+          constraints: const BoxConstraints(minHeight: AppTheme.minTouchTarget),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
